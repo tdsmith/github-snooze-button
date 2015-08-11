@@ -20,7 +20,7 @@ def parse_config(filename):
     github_username, github_token, aws_key, and aws_secret must be defined
     for each region. Defining aws_region is optional; it defaults to us-west-2.
     """
-    config = {}
+    config = []
     defaults = {"aws_region": "us-west-2"}
     string_options = ["github_username", "github_token", "aws_key", "aws_secret", "aws_region"]
     parser = configparser.SafeConfigParser()
@@ -34,12 +34,13 @@ def parse_config(filename):
     for section in sections:
         if section == "default":
             continue
-        config[section] = {}
+        this_section = {"repository_name": section}
         for option in string_options:
             if option in parser.options(section):
-                config[section][option] = parser.get(section, option)
+                this_section[option] = parser.get(section, option)
             elif option in defaults:
-                config[section][option] = defaults[option]
+                this_section[option] = defaults[option]
             else:
                 raise configparser.NoOptionError(option, section)
+        config.append(this_section)
     return config
