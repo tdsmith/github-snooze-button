@@ -3,12 +3,14 @@ try:
 except ImportError:
     import ConfigParser as configparser
 import json
+import logging
 
 import boto.sqs as sqs
 import boto.sns as sns
 import requests
 
 GITHUB_HEADERS = {"Accept": "application/vnd.github.v3+json"}
+logging.basicConfig(level=logging.DEBUG)
 
 
 def parse_config(filename):
@@ -85,6 +87,14 @@ class RepositoryListener(object):
 
         # configure repository to push to the sns topic
         self._github_connect(sns_topic_arn)
+
+    def poll(self):
+        messages = self.sqs_queue.get_messages()
+        for message in messages:
+            body = message.get_body()
+            logging.debug("Queue {} received message: {}".format(self.sqs_queue.name, body))
+            # do some processing
+            self.sqs_queue.delete_message(message)
 
     def _github_connect(self, sns_topic_arn):
         auth = requests.auth.HTTPBasicAuth(self.github_username, self.github_token)
