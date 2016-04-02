@@ -91,8 +91,14 @@ class RepositoryListener(object):
         # configure repository to push to the sns topic
         self._github_connect(sns_topic_arn)
 
-    def poll(self):
-        messages = self.sqs_queue.get_messages()
+    def poll(self, wait=True):
+        """Checks for messages from the Github repository.
+
+        Args:
+            wait (bool): Use SQS long polling, i.e. wait up to 20 seconds for a
+                message to be received before returning an empty list.
+        """
+        messages = self.sqs_queue.get_messages(wait_time_seconds=20*wait)
         for message in messages:
             body = message.get_body()
             logging.debug("Queue {} received message: {}".format(self.sqs_queue.name, body))
