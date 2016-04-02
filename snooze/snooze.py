@@ -15,7 +15,18 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 def parse_config(filename):
-    """Example config file:
+    """Parses github-snooze-button configuration files.
+
+    Args:
+        filename: The name of a file in ConfigParser .ini format, described
+            below.
+
+    Returns:
+        A list of dictionaries, one dictionary per repository. Default values
+        from the [default] section are automatically copied into each
+        dictionary; there is no "default" element in the list.
+
+    Example config file:
     [default]
     github_username = tdsmith
     github_token = asdfasdfasdf
@@ -58,7 +69,32 @@ def parse_config(filename):
 
 
 class RepositoryListener(object):
-    def __init__(self, repository_name, github_username, github_token, aws_key, aws_secret, aws_region):
+    """Sets up infrastructure for listening to a Github repository."""
+
+    def __init__(self, repository_name,
+                 github_username, github_token,
+                 aws_key, aws_secret, aws_region,
+                 callbacks=None):
+        """Instantiates a RepositoryListener.
+        Additionally:
+         * Creates or connects to a AWS SQS queue named for the repository
+         * Creates or connects to a AWS SNS topic named for the repository
+         * Connects the AWS SNS topic to the AWS SQS queue
+         * Configures the Github repository to push hooks to the SNS topic
+
+        Args:
+            repository_name (str): name of a Github repository, like
+                "tdsmith/homebrew-pypi-poet"
+            github_username (str): Github username
+            github_token (str): Github authentication token from
+                https://github.com/settings/tokens/new with admin:org_hook
+                privileges
+            aws_key (str): AWS key
+            aws_secret (str): AWS secret
+            aws_region (str): AWS region (e.g. 'us-west-2')
+            callbacks (list<function(Object)>): functions to call
+                with a decoded Github JSON payload when a webhook event lands
+        """
         self.repository_name = repository_name
         self.github_username = github_username
         self.github_token = github_token
