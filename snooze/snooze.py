@@ -4,6 +4,7 @@ except ImportError:
     import ConfigParser as configparser
 import json
 import logging
+import pprint
 
 import boto.sqs as sqs
 import boto.sns as sns
@@ -91,6 +92,11 @@ class RepositoryListener(object):
         # configure repository to push to the sns topic
         self._github_connect(sns_topic_arn)
 
+        # register callbacks
+        self._callbacks = []
+        if callbacks:
+            [self.register_callback(f) for f in callbacks]
+
     def poll(self, wait=True):
         """Checks for messages from the Github repository.
 
@@ -101,9 +107,27 @@ class RepositoryListener(object):
         messages = self.sqs_queue.get_messages(wait_time_seconds=20*wait)
         for message in messages:
             body = message.get_body()
-            logging.debug("Queue {} received message: {}".format(self.sqs_queue.name, body))
-            # do some processing
-            self.sqs_queue.delete_message(message)
+            logging.debug(
+                "Queue {} received message: {}".format(
+                    self.sqs_queue.name, body))
+            try:
+                decoded_body = json.loads(body)
+            except ValueError:
+                logging.error("Queue {} received non-JSON message: {}".format(
+                    self.sqs_queue.name, body))
+            else:
+                for callback in self._callbacks:
+                    try:
+                        callback(decoded_body)
+                    except Exception as e:
+                        logging.error(
+                            "Queue {} encountered exception {} while "
+                            "processing message {}: {}".format(
+                                self.sqs_queue.name, e.__class__.__name__,
+                                pprint.pformat(decoded_body), str(e)
+                            ))
+            finally:
+                self.sqs_queue.delete_message(message)
 
     def _github_connect(self, sns_topic_arn):
         auth = requests.auth.HTTPBasicAuth(self.github_username, self.github_token)
@@ -126,6 +150,9 @@ class RepositoryListener(object):
 
     def _to_topic(self, repository_name):
         return repository_name.replace("/", "__")
+
+    def register_callback(self, callback):
+        self._callbacks.append(callback)
 
 
 def main():
