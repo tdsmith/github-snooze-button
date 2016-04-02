@@ -71,7 +71,8 @@ class RepositoryListener(object):
             aws_access_key_id=aws_key,
             aws_secret_access_key=aws_secret,
         )
-        self.sqs_queue = self.sqs_conn.create_queue("snooze:{}".format(self._to_topic(repository_name)))
+        self.sqs_queue = self.sqs_conn.create_queue(
+            "snooze:{}".format(self._to_topic(repository_name)))
 
         # create or reuse sns topic
         sns_conn = sns.connect_to_region(
@@ -80,8 +81,10 @@ class RepositoryListener(object):
             aws_secret_access_key=aws_secret,
         )
         sns_response = sns_conn.create_topic(self._to_topic(repository_name))
-        sns_topic_arn = sns_response["CreateTopicResponse"]["CreateTopicResult"]["TopicArn"]
-
+        sns_topic_arn = (sns_response.
+                         get("CreateTopicResponse").
+                         get("CreateTopicResult").
+                         get("TopicArn"))
         # configure sns topic to push to sqs queue
         sns_conn.subscribe_sqs_queue(sns_topic_arn, self.sqs_queue)
 
