@@ -6,11 +6,11 @@ with open(versionfile, 'rb') as f:
 
 setup(
     name='github-snooze-button',
-    version=__version__,
+    version=__version__,  # noqa
     url='https://github.com/tdsmith/github-snooze-button',
     license='MIT',
     author='Tim D. Smith',
-    author_email='poet@tim-smith.us',
+    author_email='snooze@tds.xyz',
     description='Snooze button for Github issues',
     packages=['snooze'],
     platforms='any',
@@ -20,7 +20,7 @@ setup(
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.4'
+        'Programming Language :: Python :: 3.5'
     ],
     install_requires=['boto', 'requests'],
 )
