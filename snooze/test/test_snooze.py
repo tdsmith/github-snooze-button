@@ -67,12 +67,18 @@ class TestRepositoryListenener(object):
         sqs_conn = boto.sqs.connect_to_region("us-west-2")
         sns_conn = boto.sns.connect_to_region("us-west-2")
         assert len(sqs_conn.get_all_queues()) == 0
-        assert len(sns_conn.get_all_topics()["ListTopicsResponse"]["ListTopicsResult"]["Topics"]) == 0
+        assert len(sns_conn.get_all_topics().
+                   get("ListTopicsResponse").
+                   get("ListTopicsResult").
+                   get("Topics")) == 0
 
         responses.add(responses.POST, "https://api.github.com/repos/tdsmith/test_repo/hooks")
         snooze.RepositoryListener(**config[0])
         assert len(sqs_conn.get_all_queues()) > 0
-        assert len(sns_conn.get_all_topics()["ListTopicsResponse"]["ListTopicsResult"]["Topics"]) > 0
+        assert len(sns_conn.get_all_topics().
+                   get("ListTopicsResponse").
+                   get("ListTopicsResult").
+                   get("Topics")) > 0
 
     @moto.mock_sqs
     @moto.mock_sns
