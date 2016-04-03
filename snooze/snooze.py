@@ -127,7 +127,8 @@ def main():
         t.daemon = True
         t.start()
     while True:
-        if threading.active_count() < len(config):
+        # wait forever for a signal or an unusual termination
+        if threading.active_count() < len(config) + 1:
             logging.error("Child polling thread quit!")
             return False
         time.sleep(1)
