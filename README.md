@@ -33,7 +33,7 @@ Add a "snooze" label to an issue, and github-snooze-button will remove the label
 
 ## Questions
 
-* _Will this cost me lots of money?_ \
+* _Will this cost me lots of money?_ 
   Probably not. [SNS](https://aws.amazon.com/sns/pricing/) and [SQS](https://aws.amazon.com/sqs/pricing/) are both free for the first million transactions a month. YMMV!
 
 ## Contact
