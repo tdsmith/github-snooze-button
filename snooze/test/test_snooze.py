@@ -1,12 +1,26 @@
 from textwrap import dedent
+import types
 
 import boto
 import moto
 import pytest
 import responses
+import six
 from testfixtures import LogCapture
 
 import snooze
+
+
+class MockAPIMetaclass(type):
+    def __new__(cls, name, bases, attrs):
+        for attr_name, attr_value in attrs.items():
+            if isinstance(attr_value, types.FunctionType):
+                attrs[attr_name] = cls.decorate(attr_value)
+        return super(MockAPIMetaclass, cls).__new__(cls, name, bases, attrs)
+
+    @classmethod
+    def decorate(cls, func):
+        return moto.mock_sqs(moto.mock_sns(responses.activate(func)))
 
 
 class TestSnooze(object):
@@ -48,6 +62,7 @@ class TestSnooze(object):
             snooze.parse_config(str(config))
 
 
+@six.add_metaclass(MockAPIMetaclass)
 class TestRepositoryListenener(object):
     @pytest.fixture
     def config(self, tmpdir):
@@ -62,9 +77,6 @@ class TestRepositoryListenener(object):
             """))
         return snooze.parse_config(str(config))
 
-    @moto.mock_sqs
-    @moto.mock_sns
-    @responses.activate
     def test_constructor(self, config):
         sqs_conn = boto.sqs.connect_to_region("us-west-2")
         sns_conn = boto.sns.connect_to_region("us-west-2")
@@ -82,9 +94,6 @@ class TestRepositoryListenener(object):
                    get("ListTopicsResult").
                    get("Topics")) > 0
 
-    @moto.mock_sqs
-    @moto.mock_sns
-    @responses.activate
     def test_poll(self, config):
         self._test_poll_was_polled = False
 
@@ -107,9 +116,6 @@ class TestRepositoryListenener(object):
         assert sqs_queue.count() == 0
         assert self._test_poll_was_polled
 
-    @moto.mock_sqs
-    @moto.mock_sns
-    @responses.activate
     def test_bad_message_is_logged(self, config):
         responses.add(responses.POST, "https://api.github.com/repos/tdsmith/test_repo/hooks")
         repo_listener = snooze.RepositoryListener(**config[0])
