@@ -77,9 +77,15 @@ class TestRepositoryListenener(object):
             """))
         return snooze.parse_config(str(config))
 
-    def test_constructor(self, config):
-        sqs_conn = boto.sqs.connect_to_region("us-west-2")
-        sns_conn = boto.sns.connect_to_region("us-west-2")
+    @pytest.fixture
+    def sqs_conn(self):
+        return boto.sqs.connect_to_region("us-west-2")
+
+    @pytest.fixture
+    def sns_conn(self):
+        return boto.sns.connect_to_region("us-west-2")
+
+    def test_constructor(self, config, sqs_conn, sns_conn):
         assert len(sqs_conn.get_all_queues()) == 0
         assert len(sns_conn.get_all_topics().
                    get("ListTopicsResponse").
@@ -94,7 +100,7 @@ class TestRepositoryListenener(object):
                    get("ListTopicsResult").
                    get("Topics")) > 0
 
-    def test_poll(self, config):
+    def test_poll(self, config, sqs_conn):
         self._test_poll_was_polled = False
 
         def my_callback(message):
@@ -103,7 +109,6 @@ class TestRepositoryListenener(object):
         responses.add(responses.POST, "https://api.github.com/repos/tdsmith/test_repo/hooks")
         repo_listener = snooze.RepositoryListener(
             callbacks=[my_callback], **config[0])
-        sqs_conn = boto.sqs.connect_to_region("us-west-2")
         sqs_queue = sqs_conn.get_all_queues()[0]
 
         message = boto.sqs.message.Message()
@@ -116,10 +121,9 @@ class TestRepositoryListenener(object):
         assert sqs_queue.count() == 0
         assert self._test_poll_was_polled
 
-    def test_bad_message_is_logged(self, config):
+    def test_bad_message_is_logged(self, config, sqs_conn):
         responses.add(responses.POST, "https://api.github.com/repos/tdsmith/test_repo/hooks")
         repo_listener = snooze.RepositoryListener(**config[0])
-        sqs_conn = boto.sqs.connect_to_region("us-west-2")
         sqs_queue = sqs_conn.get_all_queues()[0]
         message = boto.sqs.message.Message()
         message.set_body("this isn't a json message at all")
