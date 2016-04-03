@@ -6,7 +6,7 @@ import boto.sqs as sqs
 import boto.sns as sns
 import requests
 
-from .snooze import GITHUB_HEADERS
+from .constants import GITHUB_HEADERS
 
 try:
     basestring

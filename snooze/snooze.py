@@ -1,9 +1,13 @@
 from __future__ import print_function
 
+import argparse
 import logging
 import requests
 
-GITHUB_HEADERS = {"Accept": "application/vnd.github.v3+json"}
+from .config import parse_config
+from .constants import GITHUB_HEADERS
+from .repository_listener import RepositoryListener
+
 LISTEN_EVENTS = ["issue_comment",
                  "pull_request",
                  "pull_request_review_comment",
@@ -17,7 +21,7 @@ def github_patch(config, repo, url, data):
     auth = requests.auth.HTTPBasicAuth(
         repo_config["github_username"],
         repo_config["github_token"])
-    return requests.patch(url, auth=auth, json=data)
+    return requests.patch(url, auth=auth, json=data, headers=GITHUB_HEADERS)
 
 
 def github_get(config, repo, url):
@@ -25,7 +29,7 @@ def github_get(config, repo, url):
     auth = requests.auth.HTTPBasicAuth(
         repo_config["github_username"],
         repo_config["github_token"])
-    return requests.get(url, auth=auth)
+    return requests.get(url, auth=auth, headers=GITHUB_HEADERS)
 
 
 def clear_snooze_label_if_set(config, repo, issue):
@@ -99,6 +103,24 @@ def github_callback(config, event, message):
 
 
 def main():
-    # parse config
-    # consume update
-    pass
+    parser = argparse.ArgumentParser()
+    parser.add_argument("config")
+    args = parser.parse_args()
+
+    config = parse_config(args.config)
+    listeners = []
+    for name, repo in config.items():
+        callback = lambda event, message: github_callback(config, event, message)
+        listeners.append(RepositoryListener(
+            callbacks=[callback],
+            events=LISTEN_EVENTS,
+            **repo))
+    while True:
+        for listener in listeners:
+            listener.poll()
+        # time.sleep(60)
+
+    return True
+
+if __name__ == "__main__":
+    main()
