@@ -40,10 +40,10 @@ class RepositoryListener(object):
             aws_region (str): AWS region (e.g. 'us-west-2')
             events (list<str>): List of Github webhook events to monitor for
                 activity, from https://developer.github.com/webhooks/#events.
-            callbacks (list<function(Object)>): functions to call
-                with a decoded Github JSON payload when a webhook event lands.
-                You can register these after instantiation with
-                register_callback.
+            callbacks (list<function(str event_type, Object event_payload)>):
+                functions to call with a decoded Github JSON payload when a
+                webhook event lands. You can register these after instantiation
+                with register_callback.
         """
         self.repository_name = repository_name
         self.github_username = github_username
@@ -92,9 +92,14 @@ class RepositoryListener(object):
 
         Returns: None
         """
-        messages = self.sqs_queue.get_messages(wait_time_seconds=20*wait)
+        messages = self.sqs_queue.get_messages(
+            message_attributes=["X-Github-Event"],
+            wait_time_seconds=20*wait)
         for message in messages:
             body = message.get_body()
+            event_type = (message.message_attributes.
+                          get("X-Github-Event", {}).
+                          get("string_value", None))
             logging.debug(
                 "Queue {} received message: {}".format(
                     self.sqs_queue.name, body))
@@ -106,7 +111,7 @@ class RepositoryListener(object):
             else:
                 for callback in self._callbacks:
                     try:
-                        callback(decoded_body)
+                        callback(event_type, decoded_body)
                     except Exception as e:
                         logging.error(
                             "Queue {} encountered exception {} while "
@@ -164,7 +169,8 @@ class RepositoryListener(object):
         received.
 
         Args:
-            callback (function(Object)): function accepting a single argument
-                which receives the JSON-decoded webhook body
+            callback (function(str, Object)): function accepting an event_type
+                argument with the name of the triggered event and an event_payload
+                object with the JSON-decoded payload body
         """
         self._callbacks.append(callback)

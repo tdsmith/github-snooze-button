@@ -105,7 +105,7 @@ class TestRepositoryListenener(object):
     def test_poll(self, config, sqs_conn):
         self._test_poll_was_polled = False
 
-        def my_callback(message):
+        def my_callback(event, message):
             self._test_poll_was_polled = True
 
         responses.add(responses.POST, "https://api.github.com/repos/tdsmith/test_repo/hooks")
@@ -135,7 +135,7 @@ class TestRepositoryListenener(object):
             repo_listener.poll()
             assert 'ERROR' in str(l)
 
-        def my_callback(message):
+        def my_callback(event, message):
             raise ValueError("I object!")
         message = boto.sqs.message.Message()
         message.set_body('["example message"]')
