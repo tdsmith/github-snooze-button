@@ -28,6 +28,7 @@ class TestSnooze(object):
             [default]
             github_username: tdsmith
             github_token: deadbeefcafe
+            cruft: ignoreme
             [tdsmith/test_repo]
             aws_key: key
             aws_secret: secret
@@ -84,15 +85,22 @@ class TestRepositoryListenener(object):
     @moto.mock_sns
     @responses.activate
     def test_poll(self, config):
+        self._test_poll_was_polled = False
+
+        def my_callback(message):
+            self._test_poll_was_polled = True
+
         responses.add(responses.POST, "https://api.github.com/repos/tdsmith/test_repo/hooks")
-        repo_listener = snooze.RepositoryListener(**config[0])
+        repo_listener = snooze.RepositoryListener(
+            callbacks=[my_callback], **config[0])
         sqs_conn = boto.sqs.connect_to_region("us-west-2")
         sqs_queue = sqs_conn.get_all_queues()[0]
 
         message = boto.sqs.message.Message()
-        message.set_body("example message")
+        message.set_body("['example message']")
         sqs_queue.write(message)
         assert sqs_queue.count() > 0
 
         repo_listener.poll()
         assert sqs_queue.count() == 0
+        assert self._test_poll_was_polled
