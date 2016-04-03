@@ -4,6 +4,7 @@ import boto
 import moto
 import pytest
 import responses
+from testfixtures import LogCapture
 
 import snooze
 
@@ -97,10 +98,26 @@ class TestRepositoryListenener(object):
         sqs_queue = sqs_conn.get_all_queues()[0]
 
         message = boto.sqs.message.Message()
-        message.set_body("['example message']")
+        message.set_body('["example message"]')
+        print(message.get_body())
         sqs_queue.write(message)
         assert sqs_queue.count() > 0
 
         repo_listener.poll()
         assert sqs_queue.count() == 0
         assert self._test_poll_was_polled
+
+    @moto.mock_sqs
+    @moto.mock_sns
+    @responses.activate
+    def test_bad_message_is_logged(self, config):
+        responses.add(responses.POST, "https://api.github.com/repos/tdsmith/test_repo/hooks")
+        repo_listener = snooze.RepositoryListener(**config[0])
+        sqs_conn = boto.sqs.connect_to_region("us-west-2")
+        sqs_queue = sqs_conn.get_all_queues()[0]
+        message = boto.sqs.message.Message()
+        message.set_body("this isn't a json message at all")
+        sqs_queue.write(message)
+        with LogCapture() as l:
+            repo_listener.poll()
+            assert 'ERROR' in str(l)
