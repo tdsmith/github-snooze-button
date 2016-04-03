@@ -108,6 +108,8 @@ def github_callback(config, event, message):
 def poll_forever(repo_listener, wait):
     while True:
         repo_listener.poll()
+        logging.debug("Waiting {}s before polling {}".
+                      format(wait, repo_listener.repository_name))
         time.sleep(wait)
 
 
