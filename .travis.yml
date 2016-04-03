@@ -1,0 +1,8 @@
+language: python
+sudo: false
+install:
+- pip install tox tox-travis
+script:
+- tox
+after_success:
+- coveralls
