@@ -54,6 +54,7 @@ class TestConfigParser(object):
             """))
         parsed = snooze.parse_config(str(config))
         assert parsed["tdsmith/test_repo"]["github_username"] == "tdsmith"
+        assert parsed["tdsmith/test_repo"]["poll_interval"] == 0
 
     def test_parse_config_raises(self, tmpdir):
         try:
