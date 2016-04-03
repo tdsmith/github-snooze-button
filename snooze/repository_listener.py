@@ -59,7 +59,7 @@ class RepositoryListener(object):
             aws_secret_access_key=aws_secret,
         )
         self.sqs_queue = self.sqs_conn.create_queue(
-            "snooze:{}".format(self._to_topic(repository_name)))
+            "snooze__{}".format(self._to_topic(repository_name)))
 
         # create or reuse sns topic
         sns_conn = sns.connect_to_region(
@@ -97,14 +97,13 @@ class RepositoryListener(object):
             wait_time_seconds=20*wait)
         for message in messages:
             body = message.get_body()
-            event_type = (message.message_attributes.
-                          get("X-Github-Event", {}).
-                          get("string_value", None))
             logging.debug(
                 "Queue {} received message: {}".format(
                     self.sqs_queue.name, body))
             try:
-                decoded_body = json.loads(body)
+                decoded_full_body = json.loads(body)
+                decoded_body = json.loads(decoded_full_body["Message"])
+                event_type = decoded_full_body["MessageAttributes"]["X-Github-Event"]["Value"]
             except ValueError:
                 logging.error("Queue {} received non-JSON message: {}".format(
                     self.sqs_queue.name, body))
