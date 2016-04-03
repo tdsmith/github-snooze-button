@@ -11,11 +11,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 def github_patch(config, repo, url, data):
-    repo_config = None
-    for r in config:
-        if r["repository_name"] == repo:
-            repo_config = r
-            break
+    repo_config = config[repo]
     auth = requests.auth.HTTPBasicAuth(
         repo_config["github_username"],
         repo_config["github_token"])

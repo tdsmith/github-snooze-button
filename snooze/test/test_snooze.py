@@ -38,8 +38,8 @@ class TestConfigParser(object):
             aws_secret: secret
             """))
         parsed = snooze.parse_config(str(config))
-        assert parsed[0]["repository_name"] == "tdsmith/test_repo"
-        assert parsed[0]["github_username"] == "tdsmith"
+        assert parsed["tdsmith/test_repo"]["repository_name"] == "tdsmith/test_repo"
+        assert parsed["tdsmith/test_repo"]["github_username"] == "tdsmith"
 
     def test_parse_config_defaults(self, tmpdir):
         config = tmpdir.join("config.txt")
@@ -53,7 +53,7 @@ class TestConfigParser(object):
             aws_secret: secret
             """))
         parsed = snooze.parse_config(str(config))
-        assert parsed[0]["github_username"] == "tdsmith"
+        assert parsed["tdsmith/test_repo"]["github_username"] == "tdsmith"
 
     def test_parse_config_raises(self, tmpdir):
         try:
@@ -97,7 +97,7 @@ class TestRepositoryListenener(object):
                    get("Topics")) == 0
 
         responses.add(responses.POST, "https://api.github.com/repos/tdsmith/test_repo/hooks")
-        snooze.RepositoryListener(events=snooze.LISTEN_EVENTS, **config[0])
+        snooze.RepositoryListener(events=snooze.LISTEN_EVENTS, **config["tdsmith/test_repo"])
         assert len(sqs_conn.get_all_queues()) > 0
         assert len(sns_conn.get_all_topics().
                    get("ListTopicsResponse").
@@ -113,7 +113,7 @@ class TestRepositoryListenener(object):
         responses.add(responses.POST, "https://api.github.com/repos/tdsmith/test_repo/hooks")
         repo_listener = snooze.RepositoryListener(
             events=snooze.LISTEN_EVENTS,
-            callbacks=[my_callback], **config[0])
+            callbacks=[my_callback], **config["tdsmith/test_repo"])
         sqs_queue = sqs_conn.get_all_queues()[0]
 
         message = boto.sqs.message.Message()
@@ -128,7 +128,9 @@ class TestRepositoryListenener(object):
 
     def test_bad_message_is_logged(self, config, sqs_conn):
         responses.add(responses.POST, "https://api.github.com/repos/tdsmith/test_repo/hooks")
-        repo_listener = snooze.RepositoryListener(events=snooze.LISTEN_EVENTS, **config[0])
+        repo_listener = snooze.RepositoryListener(
+            events=snooze.LISTEN_EVENTS,
+            **config["tdsmith/test_repo"])
         sqs_queue = sqs_conn.get_all_queues()[0]
         message = boto.sqs.message.Message()
         message.set_body("this isn't a json message at all")

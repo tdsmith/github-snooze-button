@@ -12,9 +12,9 @@ def parse_config(filename):
             below.
 
     Returns:
-        A list of dictionaries, one dictionary per repository. Default values
-        from the [default] section are automatically copied into each
-        dictionary; there is no "default" element in the list.
+        A dictionary of dictionaries, one inner dictionary per repository.
+        Default values from the [default] section are automatically copied into
+        each dictionary; there is no "default" element in the list.
 
     Example config file:
     [default]
@@ -32,7 +32,7 @@ def parse_config(filename):
     github_username, github_token, aws_key, and aws_secret must be defined
     for each region. Defining aws_region is optional; it defaults to us-west-2.
     """
-    config = []
+    config = {}
     defaults = {"aws_region": "us-west-2"}
     string_options = ["github_username", "github_token", "aws_key", "aws_secret", "aws_region"]
     parser = configparser.SafeConfigParser()
@@ -54,5 +54,5 @@ def parse_config(filename):
                 this_section[option] = defaults[option]
             else:
                 raise configparser.NoOptionError(option, section)
-        config.append(this_section)
+        config.setdefault(section, {}).update(this_section)
     return config
