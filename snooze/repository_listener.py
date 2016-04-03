@@ -20,7 +20,7 @@ class RepositoryListener(object):
     def __init__(self, repository_name,
                  github_username, github_token,
                  aws_key, aws_secret, aws_region,
-                 events, callbacks=None):
+                 events, callbacks=None, **kwargs):
         """Instantiates a RepositoryListener.
         Additionally:
          * Creates or connects to a AWS SQS queue named for the repository

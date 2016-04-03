@@ -123,7 +123,7 @@ def main():
             callbacks=[callback],
             events=LISTEN_EVENTS,
             **repo)
-        t = threading.Thread(target=poll_forever, args=(listener, 0))
+        t = threading.Thread(target=poll_forever, args=(listener, repo["poll_interval"]))
         t.daemon = True
         t.start()
     while True:
