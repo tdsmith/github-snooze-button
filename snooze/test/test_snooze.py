@@ -175,3 +175,8 @@ class TestGithubWebhookCallback(object):
                                "issue_comment",
                                json.loads(github_responses.ISSUE_COMMENT))
         assert len(responses.calls) == 1
+
+    def test_bad_callback_type_is_logged(self, config):
+        with LogCapture() as l:
+            snooze.github_callback(config, "foobar", {})
+            assert "WARNING" in str(l)

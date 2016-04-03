@@ -32,7 +32,7 @@ def github_callback(config, event, message):
                 {"labels": list(issue_labels)})
             r.raise_for_status()
     else:
-        logging.debug("Ignoring event type {}" % event)
+        logging.warning("Ignoring event type {}".format(event))
 
 
 def main():
