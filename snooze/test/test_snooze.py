@@ -12,6 +12,8 @@ import snooze
 
 
 class MockAPIMetaclass(type):
+    """Metaclass which wraps all methods of its instances with decorators
+    that redirect SNS and SQS calls to moto and activates responses."""
     def __new__(cls, name, bases, attrs):
         for attr_name, attr_value in attrs.items():
             if isinstance(attr_value, types.FunctionType):
