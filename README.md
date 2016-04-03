@@ -31,9 +31,13 @@ Add a "snooze" label to an issue, and github-snooze-button will remove the label
 1. Install github-snooze-button: `pip install git+https://github.com/tdsmith/github-snooze-button.git`
 1. Launch with `python -m snooze /path/to/config.ini`
 
+## Teardown
+
+After terminating snooze, the queue will continue to collect notifications. Avoid this by deleting the Amazon SNS service from your repository's "Webhooks & services" configuration page. It will be automatically recreated the next time you run snooze.
+
 ## Questions
 
-* _Will this cost me lots of money?_ 
+* _Will this cost me lots of money?_
   Probably not. [SNS](https://aws.amazon.com/sns/pricing/) and [SQS](https://aws.amazon.com/sqs/pricing/) are both free for the first million transactions a month. YMMV!
 
 ## Contact
