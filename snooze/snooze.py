@@ -16,6 +16,11 @@ import boto.sns as sns
 import requests
 
 GITHUB_HEADERS = {"Accept": "application/vnd.github.v3+json"}
+LISTEN_EVENTS = ["issues",
+                 "issue_comment",
+                 "pull_request",
+                 "pull_request_review_comment",
+                 ]
 logging.basicConfig(level=logging.DEBUG)
 
 
@@ -79,8 +84,7 @@ class RepositoryListener(object):
     def __init__(self, repository_name,
                  github_username, github_token,
                  aws_key, aws_secret, aws_region,
-                 events=None,
-                 callbacks=None):
+                 events, callbacks=None):
         """Instantiates a RepositoryListener.
         Additionally:
          * Creates or connects to a AWS SQS queue named for the repository
@@ -100,7 +104,6 @@ class RepositoryListener(object):
             aws_region (str): AWS region (e.g. 'us-west-2')
             events (list<str>): List of Github webhook events to monitor for
                 activity, from https://developer.github.com/webhooks/#events.
-                Defaults to ["issues", "issue_comment"].
             callbacks (list<function(Object)>): functions to call
                 with a decoded Github JSON payload when a webhook event lands.
                 You can register these after instantiation with
@@ -137,8 +140,6 @@ class RepositoryListener(object):
         sns_conn.subscribe_sqs_queue(sns_topic_arn, self.sqs_queue)
 
         # configure repository to push to the sns topic
-        if events is None:
-            events = ["issues", "issue_comment"]
         self._github_connect(sns_topic_arn, events)
 
         # register callbacks
@@ -222,6 +223,9 @@ class RepositoryListener(object):
 
     def register_callback(self, callback):
         """Registers a callback on a webhook received event.
+
+        All callbacks are always called, in the order registered, for all events
+        received.
 
         Args:
             callback (function(Object)): function accepting a single argument
