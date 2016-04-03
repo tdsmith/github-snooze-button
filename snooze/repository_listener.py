@@ -6,12 +6,12 @@ import boto.sqs as sqs
 import boto.sns as sns
 import requests
 
+from .snooze import GITHUB_HEADERS
+
 try:
     basestring
 except NameError:
     basestring = str
-
-GITHUB_HEADERS = {"Accept": "application/vnd.github.v3+json"}
 
 
 class RepositoryListener(object):

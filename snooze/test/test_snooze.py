@@ -1,3 +1,4 @@
+import json
 from textwrap import dedent
 import types
 
@@ -9,6 +10,7 @@ import six
 from testfixtures import LogCapture
 
 import snooze
+import github_responses
 
 
 class MockAPIMetaclass(type):
@@ -147,4 +149,27 @@ class TestRepositoryListenener(object):
 
 
 class TestGithubWebhookCallback(object):
-    pass
+    @pytest.fixture
+    def config(self, tmpdir):
+        config = tmpdir.join("config.txt")
+        config.write(dedent("""\
+            [baxterthehacker/public-repo]
+            github_username: frodo
+            github_token: baggins
+            aws_key: shire
+            aws_secret: precious
+            aws_region: us-west-2
+            """))
+        return snooze.parse_config(str(config))
+
+    @responses.activate
+    def test_issue_comment_callback(self, config):
+        """Test that a snooze label is removed from issues when a new comment
+        is received."""
+        responses.add(
+            responses.PATCH,
+            "https://api.github.com/repos/baxterthehacker/public-repo/issues/2")
+        snooze.github_callback(config,
+                               "issue_comment",
+                               json.loads(github_responses.ISSUE_COMMENT))
+        assert len(responses.calls) == 1
