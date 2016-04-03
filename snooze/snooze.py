@@ -6,6 +6,11 @@ import json
 import logging
 import pprint
 
+try:
+    basestring
+except NameError:
+    basestring = str
+
 import boto.sqs as sqs
 import boto.sns as sns
 import requests
@@ -74,6 +79,7 @@ class RepositoryListener(object):
     def __init__(self, repository_name,
                  github_username, github_token,
                  aws_key, aws_secret, aws_region,
+                 events=None,
                  callbacks=None):
         """Instantiates a RepositoryListener.
         Additionally:
@@ -92,8 +98,13 @@ class RepositoryListener(object):
             aws_key (str): AWS key
             aws_secret (str): AWS secret
             aws_region (str): AWS region (e.g. 'us-west-2')
+            events (list<str>): List of Github webhook events to monitor for
+                activity, from https://developer.github.com/webhooks/#events.
+                Defaults to ["issues", "issue_comment"].
             callbacks (list<function(Object)>): functions to call
-                with a decoded Github JSON payload when a webhook event lands
+                with a decoded Github JSON payload when a webhook event lands.
+                You can register these after instantiation with
+                register_callback.
         """
         self.repository_name = repository_name
         self.github_username = github_username
@@ -126,7 +137,9 @@ class RepositoryListener(object):
         sns_conn.subscribe_sqs_queue(sns_topic_arn, self.sqs_queue)
 
         # configure repository to push to the sns topic
-        self._github_connect(sns_topic_arn)
+        if events is None:
+            events = ["issues", "issue_comment"]
+        self._github_connect(sns_topic_arn, events)
 
         # register callbacks
         self._callbacks = []
@@ -165,8 +178,10 @@ class RepositoryListener(object):
             finally:
                 self.sqs_queue.delete_message(message)
 
-    def _github_connect(self, sns_topic_arn):
+    def _github_connect(self, sns_topic_arn, events):
         auth = requests.auth.HTTPBasicAuth(self.github_username, self.github_token)
+        if isinstance(events, basestring):
+            events = [events]
         payload = {
             "name": "amazonsns",
             "config": {
@@ -175,7 +190,7 @@ class RepositoryListener(object):
                 "sns_topic": sns_topic_arn,
                 "sns_region": self.aws_region,
             },
-            "events": ["issues", "issue_comment"],
+            "events": events,
         }
         r = requests.post(
             "https://api.github.com/repos/{}/hooks".format(self.repository_name),
