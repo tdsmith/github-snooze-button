@@ -89,6 +89,15 @@ class TestRepositoryListenener(object):
     def sns_conn(self):
         return boto.sns.connect_to_region("us-west-2")
 
+    @pytest.fixture
+    def trivial_message(self):
+        a = {"key": "value"}
+        b = {"Message": json.dumps(a)}
+        (b.setdefault("MessageAttributes", {}).
+            setdefault("X-Github-Event", {}).
+            setdefault("Value", "spam"))
+        return json.dumps(b)
+
     def test_constructor(self, config, sqs_conn, sns_conn):
         assert len(sqs_conn.get_all_queues()) == 0
         assert len(sns_conn.get_all_topics().
@@ -104,7 +113,7 @@ class TestRepositoryListenener(object):
                    get("ListTopicsResult").
                    get("Topics")) > 0
 
-    def test_poll(self, config, sqs_conn):
+    def test_poll(self, config, sqs_conn, trivial_message):
         self._test_poll_was_polled = False
 
         def my_callback(event, message):
@@ -117,8 +126,7 @@ class TestRepositoryListenener(object):
         sqs_queue = sqs_conn.get_all_queues()[0]
 
         message = boto.sqs.message.Message()
-        message.set_body('["example message"]')
-        print(message.get_body())
+        message.set_body(trivial_message)
         sqs_queue.write(message)
         assert sqs_queue.count() > 0
 
@@ -126,7 +134,7 @@ class TestRepositoryListenener(object):
         assert sqs_queue.count() == 0
         assert self._test_poll_was_polled
 
-    def test_bad_message_is_logged(self, config, sqs_conn):
+    def test_bad_message_is_logged(self, config, sqs_conn, trivial_message):
         responses.add(responses.POST, "https://api.github.com/repos/tdsmith/test_repo/hooks")
         repo_listener = snooze.RepositoryListener(
             events=snooze.LISTEN_EVENTS,
@@ -142,7 +150,7 @@ class TestRepositoryListenener(object):
         def my_callback(event, message):
             raise ValueError("I object!")
         message = boto.sqs.message.Message()
-        message.set_body('["example message"]')
+        message.set_body(trivial_message)
         sqs_queue.write(message)
         repo_listener.register_callback(my_callback)
         with LogCapture() as l:
