@@ -3,6 +3,8 @@ from __future__ import print_function
 import argparse
 import logging
 import requests
+import threading
+import time
 
 from .config import parse_config
 from .constants import GITHUB_HEADERS
@@ -102,24 +104,32 @@ def github_callback(config, event, message):
     return False
 
 
+def poll_forever(repo_listener, wait):
+    while True:
+        repo_listener.poll()
+        time.sleep(wait)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
     args = parser.parse_args()
 
     config = parse_config(args.config)
-    listeners = []
     for name, repo in config.items():
         callback = lambda event, message: github_callback(config, event, message)
-        listeners.append(RepositoryListener(
+        listener = RepositoryListener(
             callbacks=[callback],
             events=LISTEN_EVENTS,
-            **repo))
+            **repo)
+        t = threading.Thread(target=poll_forever, args=(listener, 0))
+        t.daemon = True
+        t.start()
     while True:
-        for listener in listeners:
-            listener.poll()
-        # time.sleep(60)
-
+        if threading.active_count() < len(config):
+            logging.error("Child polling thread quit!")
+            return False
+        time.sleep(1)
     return True
 
 if __name__ == "__main__":
