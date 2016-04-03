@@ -127,3 +127,13 @@ class TestRepositoryListenener(object):
         with LogCapture() as l:
             repo_listener.poll()
             assert 'ERROR' in str(l)
+
+        def my_callback(message):
+            raise ValueError("I object!")
+        message = boto.sqs.message.Message()
+        message.set_body('["example message"]')
+        sqs_queue.write(message)
+        repo_listener.register_callback(my_callback)
+        with LogCapture() as l:
+            repo_listener.poll()
+            assert 'I object!' in str(l)
