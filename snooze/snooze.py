@@ -3,6 +3,7 @@ from __future__ import print_function
 import argparse
 import logging
 import requests
+import sys
 import threading
 import time
 
@@ -133,4 +134,4 @@ def main():
     return True
 
 if __name__ == "__main__":
-    main()
+    sys.exit(not main())

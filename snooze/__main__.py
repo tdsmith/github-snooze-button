@@ -1,3 +1,4 @@
+import sys
 from .snooze import main
 
-main()
+sys.exit(not main())
