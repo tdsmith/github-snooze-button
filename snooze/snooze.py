@@ -152,6 +152,8 @@ class RepositoryListener(object):
         Args:
             wait (bool): Use SQS long polling, i.e. wait up to 20 seconds for a
                 message to be received before returning an empty list.
+
+        Returns: None
         """
         messages = self.sqs_queue.get_messages(wait_time_seconds=20*wait)
         for message in messages:
@@ -179,6 +181,15 @@ class RepositoryListener(object):
                 self.sqs_queue.delete_message(message)
 
     def _github_connect(self, sns_topic_arn, events):
+        """Connects a Github repository to a SNS topic.
+
+        Args:
+            sns_topic_arn: ARN of an existing SNS topic
+            events (list<str> | str): Github webhook events to monitor for
+                activity, from https://developer.github.com/webhooks/#events.
+
+        Returns: None
+        """
         auth = requests.auth.HTTPBasicAuth(self.github_username, self.github_token)
         if isinstance(events, basestring):
             events = [events]
@@ -200,9 +211,22 @@ class RepositoryListener(object):
         r.raise_for_status()
 
     def _to_topic(self, repository_name):
+        """Converts a repository_name to a valid SNS topic name.
+
+        Args:
+            repository_name: Name of a Github repository
+
+        Returns: str
+        """
         return repository_name.replace("/", "__")
 
     def register_callback(self, callback):
+        """Registers a callback on a webhook received event.
+
+        Args:
+            callback (function(Object)): function accepting a single argument
+                which receives the JSON-decoded webhook body
+        """
         self._callbacks.append(callback)
 
 
