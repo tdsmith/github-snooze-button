@@ -25,7 +25,7 @@ class MockAPIMetaclass(type):
         return moto.mock_sqs(moto.mock_sns(responses.activate(func)))
 
 
-class TestSnooze(object):
+class TestConfigParser(object):
     def test_parse_config(self, tmpdir):
         config = tmpdir.join("config.txt")
         config.write(dedent("""\
@@ -144,3 +144,7 @@ class TestRepositoryListenener(object):
         with LogCapture() as l:
             repo_listener.poll()
             assert 'I object!' in str(l)
+
+
+class TestGithubWebhookCallback(object):
+    pass
