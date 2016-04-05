@@ -36,6 +36,7 @@ class TestConfigParser(object):
             github_token: deadbeefcafe
             aws_key: key
             aws_secret: secret
+            snooze_label: snooze
             """))
         parsed = snooze.parse_config(str(config))
         assert parsed["tdsmith/test_repo"]["repository_name"] == "tdsmith/test_repo"
@@ -48,6 +49,7 @@ class TestConfigParser(object):
             github_username: tdsmith
             github_token: deadbeefcafe
             cruft: ignoreme
+            snooze_label: snooze
             [tdsmith/test_repo]
             aws_key: key
             aws_secret: secret
@@ -79,6 +81,7 @@ class TestRepositoryListenener(object):
             aws_key: shire
             aws_secret: precious
             aws_region: us-west-2
+            snooze_label: snooze
             """))
         return snooze.parse_config(str(config))
 
@@ -170,6 +173,7 @@ class TestGithubWebhookCallback(object):
             aws_key: shire
             aws_secret: precious
             aws_region: us-west-2
+            snooze_label: snooze
             """))
         return snooze.parse_config(str(config))
 

@@ -23,23 +23,25 @@ def parse_config(filename):
     aws_key = keykeykey
     aws_secret = secretsecret
     poll_interval = 40
+    snooze_label = response needed
 
     [tdsmith/test_repository]
 
     [tdsmith/some_other_repository]
     github_username = something_else
     github_password = jkljkljkljkl
+    snooze_label = snooze
 
-    github_username, github_token, aws_key, and aws_secret must be defined
-    for each region. Defining aws_region is optional; it defaults to us-west-2.
-    Defining poll_interval (the time in seconds between 20-second long polls) is
-    optional; it defaults to 0.
+    github_username, github_token, aws_key, aws_secret, and snooze_label must
+    be defined for each repository. Defining aws_region is optional; it defaults
+    to us-west-2. Defining poll_interval (the time in seconds between 20-second
+    long polls) is optional; it defaults to 0.
     """
     config = {}
     defaults = {"aws_region": "us-west-2", "poll_interval": 0}
     string_options = (["github_username", "github_token",
                        "aws_key", "aws_secret", "aws_region",
-                       "poll_interval"])
+                       "poll_interval", "snooze_label"])
     parser = configparser.SafeConfigParser()
     parser.read(filename)
     sections = parser.sections()
