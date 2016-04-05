@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import json
 import pprint
 import logging
@@ -6,7 +8,7 @@ import boto.sqs as sqs
 import boto.sns as sns
 import requests
 
-from .constants import GITHUB_HEADERS
+from snooze.constants import GITHUB_HEADERS
 
 try:
     basestring

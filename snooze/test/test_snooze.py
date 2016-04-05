@@ -175,7 +175,7 @@ class TestGithubWebhookCallback(object):
             aws_region: us-west-2
             snooze_label: snooze
             """))
-        return snooze.parse_config(str(config))
+        return snooze.parse_config(str(config))["baxterthehacker/public-repo"]
 
     @responses.activate
     def test_issue_comment_callback(self, config):
@@ -184,18 +184,22 @@ class TestGithubWebhookCallback(object):
         responses.add(
             responses.PATCH,
             "https://api.github.com/repos/baxterthehacker/public-repo/issues/2")
-        r = snooze.github_callback(config,
-                                   "issue_comment",
-                                   json.loads(github_responses.SNOOZED_ISSUE_COMMENT))
+        r = snooze.github_callback(
+            "issue_comment",
+            json.loads(github_responses.SNOOZED_ISSUE_COMMENT),
+            (config["github_username"], config["github_token"]),
+            config["snooze_label"])
         assert r is True
         assert len(responses.calls) == 1
 
     @responses.activate
     def test_issue_comment_callback_not_snoozed(self, config):
         """Don't do anything on receiving an unsnoozed message."""
-        r = snooze.github_callback(config,
-                                   "issue_comment",
-                                   json.loads(github_responses.UNSNOOZED_ISSUE_COMMENT))
+        r = snooze.github_callback(
+            "issue_comment",
+            json.loads(github_responses.UNSNOOZED_ISSUE_COMMENT),
+            (config["github_username"], config["github_token"]),
+            config["snooze_label"])
         assert r is False
         assert len(responses.calls) == 0
 
@@ -210,9 +214,11 @@ class TestGithubWebhookCallback(object):
             responses.GET,
             "https://api.github.com/repos/baxterthehacker/public-repo/issues/1",
             body=github_responses.SNOOZED_ISSUE_GET)
-        r = snooze.github_callback(config,
-                                   "pull_request",
-                                   json.loads(github_responses.PULL_REQUEST))
+        r = snooze.github_callback(
+            "pull_request",
+            json.loads(github_responses.PULL_REQUEST),
+            (config["github_username"], config["github_token"]),
+            config["snooze_label"])
         assert r is True
         assert len(responses.calls) == 2
 
@@ -224,9 +230,11 @@ class TestGithubWebhookCallback(object):
             responses.GET,
             "https://api.github.com/repos/baxterthehacker/public-repo/issues/1",
             body=github_responses.UNSNOOZED_ISSUE_GET)
-        r = snooze.github_callback(config,
-                                   "pull_request",
-                                   json.loads(github_responses.PULL_REQUEST))
+        r = snooze.github_callback(
+            "pull_request",
+            json.loads(github_responses.PULL_REQUEST),
+            (config["github_username"], config["github_token"]),
+            config["snooze_label"])
         assert r is False
         assert len(responses.calls) == 1
 
@@ -241,9 +249,11 @@ class TestGithubWebhookCallback(object):
             responses.GET,
             "https://api.github.com/repos/baxterthehacker/public-repo/issues/1",
             body=github_responses.SNOOZED_ISSUE_GET)
-        r = snooze.github_callback(config,
-                                   "pull_request_review_comment",
-                                   json.loads(github_responses.PULL_REQUEST_REVIEW_COMMENT))
+        r = snooze.github_callback(
+            "pull_request_review_comment",
+            json.loads(github_responses.PULL_REQUEST_REVIEW_COMMENT),
+            (config["github_username"], config["github_token"]),
+            config["snooze_label"])
         assert r is True
         assert len(responses.calls) == 2
 
@@ -256,13 +266,14 @@ class TestGithubWebhookCallback(object):
             "https://api.github.com/repos/baxterthehacker/public-repo/issues/1",
             body=github_responses.UNSNOOZED_ISSUE_GET)
         r = snooze.github_callback(
-            config,
             "pull_request_review_comment",
-            json.loads(github_responses.PULL_REQUEST_REVIEW_COMMENT))
+            json.loads(github_responses.PULL_REQUEST_REVIEW_COMMENT),
+            (config["github_username"], config["github_token"]),
+            config["snooze_label"])
         assert r is False
         assert len(responses.calls) == 1
 
     def test_bad_callback_type_is_logged(self, config):
         with LogCapture() as l:
-            snooze.github_callback(config, "foobar", {})
+            snooze.github_callback("foobar", None, None, None)
             assert "WARNING" in str(l)
