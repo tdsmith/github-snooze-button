@@ -78,7 +78,9 @@ class RepositoryListener(object):
         sns_conn.subscribe_sqs_queue(sns_topic_arn, self.sqs_queue)
 
         # configure repository to push to the sns topic
-        self._github_connect(sns_topic_arn, events)
+        connect_github_to_sns(aws_key, aws_secret, aws_region,
+                              github_username, github_token, repository_name,
+                              sns_topic_arn, events)
 
         # register callbacks
         self._callbacks = []
@@ -123,36 +125,6 @@ class RepositoryListener(object):
             finally:
                 self.sqs_queue.delete_message(message)
 
-    def _github_connect(self, sns_topic_arn, events):
-        """Connects a Github repository to a SNS topic.
-
-        Args:
-            sns_topic_arn: ARN of an existing SNS topic
-            events (list<str> | str): Github webhook events to monitor for
-                activity, from https://developer.github.com/webhooks/#events.
-
-        Returns: None
-        """
-        auth = requests.auth.HTTPBasicAuth(self.github_username, self.github_token)
-        if isinstance(events, basestring):
-            events = [events]
-        payload = {
-            "name": "amazonsns",
-            "config": {
-                "aws_key": self.aws_key,
-                "aws_secret": self.aws_secret,
-                "sns_topic": sns_topic_arn,
-                "sns_region": self.aws_region,
-            },
-            "events": events,
-        }
-        r = requests.post(
-            "https://api.github.com/repos/{}/hooks".format(self.repository_name),
-            data=json.dumps(payload),
-            headers=GITHUB_HEADERS,
-            auth=auth)
-        r.raise_for_status()
-
     def _to_topic(self, repository_name):
         """Converts a repository_name to a valid SNS topic name.
 
@@ -175,3 +147,36 @@ class RepositoryListener(object):
                 object with the JSON-decoded payload body
         """
         self._callbacks.append(callback)
+
+
+def connect_github_to_sns(aws_key, aws_secret, aws_region,
+                          github_username, github_token, repository_name,
+                          sns_topic_arn, events, **_):
+    """Connects a Github repository to a SNS topic.
+
+    Args:
+        sns_topic_arn: ARN of an existing SNS topic
+        events (list<str> | str): Github webhook events to monitor for
+            activity, from https://developer.github.com/webhooks/#events.
+
+    Returns: None
+    """
+    auth = requests.auth.HTTPBasicAuth(github_username, github_token)
+    if isinstance(events, basestring):
+        events = [events]
+    payload = {
+        "name": "amazonsns",
+        "config": {
+            "aws_key": aws_key,
+            "aws_secret": aws_secret,
+            "sns_topic": sns_topic_arn,
+            "sns_region": aws_region,
+        },
+        "events": events,
+    }
+    r = requests.post(
+        "https://api.github.com/repos/{}/hooks".format(repository_name),
+        data=json.dumps(payload),
+        headers=GITHUB_HEADERS,
+        auth=auth)
+    r.raise_for_status()
