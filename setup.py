@@ -23,4 +23,10 @@ setup(
         'Programming Language :: Python :: 3.5'
     ],
     install_requires=['boto', 'requests'],
+    entry_points={
+        'console_scripts': [
+            'snooze_listen = snooze.snooze:main',
+            'snooze_deploy = snooze.lambda_deploy:main',
+        ],
+    },
 )
