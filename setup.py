@@ -26,7 +26,7 @@ setup(
     entry_points={
         'console_scripts': [
             'snooze_listen = snooze.snooze:main',
-            'snooze_deploy = snooze.lambda_deploy:main',
+            'snooze_deploy = snooze.deploy_lambda:main',
         ],
     },
 )
