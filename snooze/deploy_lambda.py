@@ -78,7 +78,7 @@ def create_deployment_packages(config):
     requires = [str(i) for i in dist.requires()]
 
     # Amazon provides boto3
-    requires = [i for i in requires if not i.starts_with("boto3")]
+    requires = [i for i in requires if not i.startswith("boto3")]
 
     tmpdir = tempfile.mkdtemp()
     try:
