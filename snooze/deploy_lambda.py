@@ -68,6 +68,9 @@ def main():
     dist = pkg_resources.get_distribution("github-snooze-button")
     requires = [str(i) for i in dist.requires()]
 
+    # Amazon provides boto3
+    requires = [i for i in requires if not i.starts_with("boto3")]
+
     # install requests somewhere
     tmpdir = tempfile.mkdtemp()
     try:
