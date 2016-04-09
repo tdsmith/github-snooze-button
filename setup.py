@@ -22,7 +22,7 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.5'
     ],
-    install_requires=['boto', 'requests'],
+    install_requires=['boto3', 'requests'],
     entry_points={
         'console_scripts': [
             'snooze_listen = snooze.snooze:main',

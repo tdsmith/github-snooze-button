@@ -2,7 +2,8 @@ import json
 from textwrap import dedent
 import types
 
-import boto
+import boto3
+import logging
 import moto
 import pytest
 import responses
@@ -11,6 +12,8 @@ from testfixtures import LogCapture
 
 import snooze
 import github_responses
+
+logging.getLogger("botocore").setLevel(logging.INFO)
 
 
 class MockAPIMetaclass(type):
@@ -86,14 +89,6 @@ class TestRepositoryListenener(object):
         return snooze.parse_config(str(config))
 
     @pytest.fixture
-    def sqs_conn(self):
-        return boto.sqs.connect_to_region("us-west-2")
-
-    @pytest.fixture
-    def sns_conn(self):
-        return boto.sns.connect_to_region("us-west-2")
-
-    @pytest.fixture
     def trivial_message(self):
         a = {"key": "value"}
         b = {"Message": json.dumps(a)}
@@ -102,22 +97,18 @@ class TestRepositoryListenener(object):
             setdefault("Value", "spam"))
         return json.dumps(b)
 
-    def test_constructor(self, config, sqs_conn, sns_conn):
-        assert len(sqs_conn.get_all_queues()) == 0
-        assert len(sns_conn.get_all_topics().
-                   get("ListTopicsResponse").
-                   get("ListTopicsResult").
-                   get("Topics")) == 0
+    def test_constructor(self, config):
+        sqs = boto3.resource("sqs", region_name="us-west-2")
+        sns = boto3.resource("sns", region_name="us-west-2")
+        assert len(list(sqs.queues.all())) == 0
+        assert len(list(sns.topics.all())) == 0
 
         responses.add(responses.POST, "https://api.github.com/repos/tdsmith/test_repo/hooks")
         snooze.RepositoryListener(events=snooze.LISTEN_EVENTS, **config["tdsmith/test_repo"])
-        assert len(sqs_conn.get_all_queues()) > 0
-        assert len(sns_conn.get_all_topics().
-                   get("ListTopicsResponse").
-                   get("ListTopicsResult").
-                   get("Topics")) > 0
+        assert len(list(sqs.queues.all())) > 0
+        assert len(list(sns.topics.all())) > 0
 
-    def test_poll(self, config, sqs_conn, trivial_message):
+    def test_poll(self, config, trivial_message):
         self._test_poll_was_polled = False
 
         def my_callback(event, message):
@@ -127,35 +118,35 @@ class TestRepositoryListenener(object):
         repo_listener = snooze.RepositoryListener(
             events=snooze.LISTEN_EVENTS,
             callbacks=[my_callback], **config["tdsmith/test_repo"])
-        sqs_queue = sqs_conn.get_all_queues()[0]
 
-        message = boto.sqs.message.Message()
-        message.set_body(trivial_message)
-        sqs_queue.write(message)
-        assert sqs_queue.count() > 0
+        sqs = boto3.resource("sqs", region_name="us-west-2")
+        sqs_queue = list(sqs.queues.all())[0]
+
+        sqs_queue.send_message(MessageBody=trivial_message)
+        assert int(sqs_queue.attributes["ApproximateNumberOfMessages"]) > 0
 
         repo_listener.poll()
-        assert sqs_queue.count() == 0
+        sqs_queue.reload()
+        assert int(sqs_queue.attributes["ApproximateNumberOfMessages"]) == 0
         assert self._test_poll_was_polled
 
-    def test_bad_message_is_logged(self, config, sqs_conn, trivial_message):
+    def test_bad_message_is_logged(self, config, trivial_message):
         responses.add(responses.POST, "https://api.github.com/repos/tdsmith/test_repo/hooks")
         repo_listener = snooze.RepositoryListener(
             events=snooze.LISTEN_EVENTS,
             **config["tdsmith/test_repo"])
-        sqs_queue = sqs_conn.get_all_queues()[0]
-        message = boto.sqs.message.Message()
-        message.set_body("this isn't a json message at all")
-        sqs_queue.write(message)
+
+        sqs = boto3.resource("sqs", region_name="us-west-2")
+        sqs_queue = list(sqs.queues.all())[0]
+        sqs_queue.send_message(MessageBody="this isn't a json message at all")
+
         with LogCapture() as l:
             repo_listener.poll()
             assert 'ERROR' in str(l)
 
         def my_callback(event, message):
             raise ValueError("I object!")
-        message = boto.sqs.message.Message()
-        message.set_body(trivial_message)
-        sqs_queue.write(message)
+        sqs_queue.send_message(MessageBody=trivial_message)
         repo_listener.register_callback(my_callback)
         with LogCapture() as l:
             repo_listener.poll()

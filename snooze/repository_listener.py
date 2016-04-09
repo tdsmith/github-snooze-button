@@ -4,8 +4,7 @@ import json
 import pprint
 import logging
 
-import boto.sqs as sqs
-import boto.sns as sns
+import boto3
 import requests
 
 from snooze.constants import GITHUB_HEADERS
@@ -55,32 +54,25 @@ class RepositoryListener(object):
         self.aws_region = aws_region
 
         # create or reuse sqs queue
-        self.sqs_conn = sqs.connect_to_region(
-            aws_region,
-            aws_access_key_id=aws_key,
-            aws_secret_access_key=aws_secret,
+        sqs_resource = boto3.resource("sqs", region_name=self.aws_region)
+        self.sqs_queue = sqs_resource.create_queue(
+            QueueName="snooze__{}".format(self._to_topic(repository_name))
         )
-        self.sqs_queue = self.sqs_conn.create_queue(
-            "snooze__{}".format(self._to_topic(repository_name)))
 
         # create or reuse sns topic
-        sns_conn = sns.connect_to_region(
-            aws_region,
-            aws_access_key_id=aws_key,
-            aws_secret_access_key=aws_secret,
+        sns_resource = boto3.resource("sns", region_name=self.aws_region)
+        sns_topic = sns_resource.create_topic(
+            Name=self._to_topic(repository_name)
         )
-        sns_response = sns_conn.create_topic(self._to_topic(repository_name))
-        sns_topic_arn = (sns_response.
-                         get("CreateTopicResponse").
-                         get("CreateTopicResult").
-                         get("TopicArn"))
-        # configure sns topic to push to sqs queue
-        sns_conn.subscribe_sqs_queue(sns_topic_arn, self.sqs_queue)
+        sns_topic.subscribe(
+            Protocol='sqs',
+            Endpoint=self.sqs_queue.attributes["QueueArn"]
+        )
 
         # configure repository to push to the sns topic
         connect_github_to_sns(aws_key, aws_secret, aws_region,
                               github_username, github_token, repository_name,
-                              sns_topic_arn, events)
+                              sns_topic.arn, events)
 
         # register callbacks
         self._callbacks = []
@@ -96,21 +88,19 @@ class RepositoryListener(object):
 
         Returns: None
         """
-        messages = self.sqs_queue.get_messages(
-            message_attributes=["X-Github-Event"],
-            wait_time_seconds=20*wait)
+        messages = self.sqs_queue.receive_messages(WaitTimeSeconds=20*wait)
         for message in messages:
-            body = message.get_body()
+            body = message.body
             logging.debug(
                 "Queue {} received message: {}".format(
-                    self.sqs_queue.name, body))
+                    self.sqs_queue.url, body))
             try:
                 decoded_full_body = json.loads(body)
                 decoded_body = json.loads(decoded_full_body["Message"])
                 event_type = decoded_full_body["MessageAttributes"]["X-Github-Event"]["Value"]
             except ValueError:
                 logging.error("Queue {} received non-JSON message: {}".format(
-                    self.sqs_queue.name, body))
+                    self.sqs_queue.url, body))
             else:
                 for callback in self._callbacks:
                     try:
@@ -119,11 +109,11 @@ class RepositoryListener(object):
                         logging.error(
                             "Queue {} encountered exception {} while "
                             "processing message {}: {}".format(
-                                self.sqs_queue.name, e.__class__.__name__,
+                                self.sqs_queue.url, e.__class__.__name__,
                                 pprint.pformat(decoded_body), str(e)
                             ))
             finally:
-                self.sqs_queue.delete_message(message)
+                message.delete()
 
     def _to_topic(self, repository_name):
         """Converts a repository_name to a valid SNS topic name.
