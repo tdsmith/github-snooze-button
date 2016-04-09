@@ -34,6 +34,11 @@ LAMBDA_ROLE_TRUST_POLICY = """\
 
 
 def create_or_get_lambda_role():
+    """Creates the Lambda execution role for github-snooze-button.
+
+    Args: None
+    Returns: None
+    """
     lambda_role_path = "/tdsmith/github-snooze-button/"
     lambda_role_name = "snooze_lambda_role"
 
@@ -52,18 +57,22 @@ def create_or_get_lambda_role():
     return role
 
 
-def main():
-    if sys.version_info[:2] != (2, 7):
-        logging.error("Must execute with Python 2.7")
-        return False
+def create_deployment_packages(config):
+    """Builds deployment packages for each configured repository.
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("config")
-    args = parser.parse_args()
+    This function does not touch AWS. Deployment packages are saved as .zip
+    files in the current working directory. The filenames of the deployment
+    packages are saved as "zip_filename" keys on the config object.
 
-    # parse config
-    config = snooze.parse_config(args.config)
+    Assumes that `zip` exists in PATH and `pip` is installed to the current
+    environment.
 
+    Args:
+        config (dict): Configuration dictionary from parse_config. Modified
+            in-place by addition of a "zip_filename" key.
+
+    Returns: None
+    """
     # get the list of packages snooze requires
     dist = pkg_resources.get_distribution("github-snooze-button")
     requires = [str(i) for i in dist.requires()]
@@ -71,7 +80,6 @@ def main():
     # Amazon provides boto3
     requires = [i for i in requires if not i.starts_with("boto3")]
 
-    # install requests somewhere
     tmpdir = tempfile.mkdtemp()
     try:
         devnull = open(os.devnull, "w")
@@ -110,7 +118,61 @@ def main():
         shutil.rmtree(tmpdir)
         devnull.close()
 
+
+def create_or_update_lambda_function(execution_role, function_name, repo):
+    """Uploads Lambda deployment package to AWS.
+
+    Args:
+        execution_role (boto3.IAM.Role): IAM role to use as the execution
+            context for the Lambda function.
+        function_name (str): Name to use for the function in AWS
+        repo (dict): Repository configuration object; one of the values of the
+            configuration dictionary returned from parse_config. `repo` is
+            expected to contain a "zip_filename" key, added by create_deployment_packages.
+
+    Returns: function_arn (str)
+    """
+    with open(repo["zip_filename"], "rb") as f:
+        package_zip = f.read()
+    client = boto3.client("lambda", region_name=repo["aws_region"])
+    function_arn = None
+    for page in client.get_paginator("list_functions").paginate():
+        for f in page["Functions"]:
+            if f["FunctionName"] == function_name:
+                function_arn = f["FunctionArn"]
+                break
+
+    if function_arn:
+        client.update_function_code(
+            FunctionName=function_name,
+            ZipFile=package_zip)
+    else:
+        response = client.create_function(
+            FunctionName=function_name,
+            Runtime="python2.7",
+            Role=execution_role.arn,
+            Handler="lambda_handler.lambda_handler",
+            Code={"ZipFile": package_zip},
+            Timeout=10,
+            MemorySize=128
+        )
+        function_arn = response["FunctionArn"]
+    return function_arn
+
+
+def main():
+    if sys.version_info[:2] != (2, 7):
+        logging.error("Must execute with Python 2.7")
+        return False
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("config")
+    args = parser.parse_args()
+
+    config = snooze.parse_config(args.config)
+    create_deployment_packages(config)
     iam_role = create_or_get_lambda_role()
+
     for repository_name, repo in config.items():
         logging.info("Configuring repository %s" % repository_name)
         # set up SNS topic and connect Github
@@ -122,36 +184,13 @@ def main():
             **repo)
 
         # upload a Lambda package
-        with open(repo["zip_filename"], "rb") as f:
-            package_zip = f.read()
-        function_name = "snooze__{}".format(repository_name.replace("/", "__"))
-        client = boto3.client("lambda", region_name=repo["aws_region"])
-        function_arn = None
-        for page in client.get_paginator("list_functions").paginate():
-            for f in page["Functions"]:
-                if f["FunctionName"] == function_name:
-                    function_arn = f["FunctionArn"]
-                    break
+        function_name = "snooze__{}".format(repo["repository_name"].replace("/", "__"))
+        function_arn = create_or_update_lambda_function(iam_role, function_name, repo)
 
-        if function_arn:
-            client.update_function_code(
-                FunctionName=function_name,
-                ZipFile=package_zip)
-        else:
-            response = client.create_function(
-                FunctionName=function_name,
-                Runtime="python2.7",
-                Role=iam_role.arn,
-                Handler="lambda_handler.lambda_handler",
-                Code={"ZipFile": package_zip},
-                Timeout=10,
-                MemorySize=128
-            )
-            function_arn = response["FunctionArn"]
-
+        lambda_client = boto3.client("lambda", region_name=repo["aws_region"])
         try:
             # give the SNS topic permission to invoke the Lambda function
-            client.add_permission(
+            lambda_client.add_permission(
                 FunctionName=function_name,
                 StatementId="1",
                 Action="lambda:InvokeFunction",
