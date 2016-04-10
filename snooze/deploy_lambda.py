@@ -100,9 +100,11 @@ def create_deployment_packages(config):
             lambda_config = dedent("""\
                 github_auth = (%r, %r)
                 snooze_label = %r
+                ignore_members_of = %r
                 """) % (repo["github_username"],
                         repo["github_token"],
-                        repo["snooze_label"])
+                        repo["snooze_label"],
+                        repo["ignore_members_of"])
             with open(os.path.join(tmpdir, "snooze", "lambda_config.py"), "w") as f:
                 f.write(lambda_config)
             repo["zip_filename"] = "lambda_deploy-{}.zip".format(repository_name.replace("/", "_"))
