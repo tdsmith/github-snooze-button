@@ -27,6 +27,7 @@ snooze_label = snooze
 # aws_region = us-west-2 # optional
 
 [your_username/repo1]
+ignore_member_of = cool_organization  # ignore comments from members of an organization
 
 [your_username/repo2]
 snooze_label = response required
@@ -36,7 +37,7 @@ The AWS credentials in the config file are sent to Github and used to push notif
 
 ## Option 1: AWS Lambda deployment
 
-1. Generate a Github authentication token with `public_repo` and `admin:repo_hook` scopes. (Note that `public_repo` gives write permission! These credentials will be embedded in the Lambda deployment package, so you should consider the contents of the deployment package sensitive.)
+1. Generate a Github authentication token with `public_repo`, `admin:repo_hook`, and (if you're using `ignore_member_of`, `org:read`) scopes. (Note that `public_repo` gives write permission! These credentials will be embedded in the Lambda deployment package, so you should consider the contents of the deployment package sensitive.)
 1. Save AWS credentials with [these permissions or better](https://gist.github.com/c27412689c76d01968c86536df796a11) to a place boto can find them: either [in the environment](https://boto3.readthedocs.org/en/latest/guide/configuration.html#environment-variables) or in a [configuration file](https://boto3.readthedocs.org/en/latest/guide/configuration.html#shared-credentials-file).
 1. Install github-snooze-button: `pip install git+https://github.com/tdsmith/github-snooze-button.git`
 1. Launch with `snooze_deploy /path/to/config.ini`. `snooze_deploy` will:
