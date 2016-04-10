@@ -37,9 +37,30 @@ class TestGithubWebhookCallback(object):
             "issue_comment",
             json.loads(github_responses.SNOOZED_ISSUE_COMMENT),
             (config["github_username"], config["github_token"]),
-            config["snooze_label"])
+            config["snooze_label"],
+            config["ignore_members_of"])
         assert r is True
         assert len(responses.calls) == 1
+
+        org_url = "https://api.github.com/orgs/fellowship/members/baxterthehacker"
+        responses.add(responses.GET, org_url, status=204)  # is a member
+        r = snooze.github_callback(
+            "issue_comment",
+            json.loads(github_responses.SNOOZED_ISSUE_COMMENT),
+            (config["github_username"], config["github_token"]),
+            config["snooze_label"],
+            ignore_members_of="fellowship")
+        assert r is False
+
+        orc_url = "https://api.github.com/orgs/orcs/members/baxterthehacker"
+        responses.add(responses.GET, orc_url, status=404)  # is not a member
+        r = snooze.github_callback(
+            "issue_comment",
+            json.loads(github_responses.SNOOZED_ISSUE_COMMENT),
+            (config["github_username"], config["github_token"]),
+            config["snooze_label"],
+            ignore_members_of="orcs")
+        assert r is True
 
     @responses.activate
     def test_issue_comment_callback_not_snoozed(self, config):
@@ -48,7 +69,8 @@ class TestGithubWebhookCallback(object):
             "issue_comment",
             json.loads(github_responses.UNSNOOZED_ISSUE_COMMENT),
             (config["github_username"], config["github_token"]),
-            config["snooze_label"])
+            config["snooze_label"],
+            config["ignore_members_of"])
         assert r is False
         assert len(responses.calls) == 0
 
@@ -67,7 +89,8 @@ class TestGithubWebhookCallback(object):
             "pull_request",
             json.loads(github_responses.PULL_REQUEST),
             (config["github_username"], config["github_token"]),
-            config["snooze_label"])
+            config["snooze_label"],
+            config["ignore_members_of"])
         assert r is True
         assert len(responses.calls) == 2
 
@@ -83,7 +106,8 @@ class TestGithubWebhookCallback(object):
             "pull_request",
             json.loads(github_responses.PULL_REQUEST),
             (config["github_username"], config["github_token"]),
-            config["snooze_label"])
+            config["snooze_label"],
+            config["ignore_members_of"])
         assert r is False
         assert len(responses.calls) == 1
 
@@ -102,9 +126,30 @@ class TestGithubWebhookCallback(object):
             "pull_request_review_comment",
             json.loads(github_responses.PULL_REQUEST_REVIEW_COMMENT),
             (config["github_username"], config["github_token"]),
-            config["snooze_label"])
+            config["snooze_label"],
+            config["ignore_members_of"])
         assert r is True
         assert len(responses.calls) == 2
+
+        org_url = "https://api.github.com/orgs/fellowship/members/baxterthehacker"
+        responses.add(responses.GET, org_url, status=204)  # is a member
+        r = snooze.github_callback(
+            "pull_request_review_comment",
+            json.loads(github_responses.PULL_REQUEST_REVIEW_COMMENT),
+            (config["github_username"], config["github_token"]),
+            config["snooze_label"],
+            ignore_members_of="fellowship")
+        assert r is False
+
+        orc_url = "https://api.github.com/orgs/orcs/members/baxterthehacker"
+        responses.add(responses.GET, orc_url, status=404)  # is not a member
+        r = snooze.github_callback(
+            "pull_request_review_comment",
+            json.loads(github_responses.PULL_REQUEST_REVIEW_COMMENT),
+            (config["github_username"], config["github_token"]),
+            config["snooze_label"],
+            ignore_members_of="orcs")
+        assert r is True
 
     @responses.activate
     def test_pr_commit_comment_callback_not_snoozed(self, config):
@@ -118,13 +163,14 @@ class TestGithubWebhookCallback(object):
             "pull_request_review_comment",
             json.loads(github_responses.PULL_REQUEST_REVIEW_COMMENT),
             (config["github_username"], config["github_token"]),
-            config["snooze_label"])
+            config["snooze_label"],
+            config["ignore_members_of"])
         assert r is False
         assert len(responses.calls) == 1
 
     def test_bad_callback_type_is_logged(self, config):
         with LogCapture() as l:
-            snooze.github_callback("foobar", None, None, None)
+            snooze.github_callback("foobar", None, None, None, None)
             assert "WARNING" in str(l)
 
 

@@ -48,16 +48,22 @@ def is_member_of(github_auth, user, organization):
             response=r)
 
 
-def github_callback(event, message, github_auth, snooze_label):
+def github_callback(event, message, github_auth, snooze_label, ignore_members_of):
     if event == "issue_comment":
         issue = message["issue"]
         logging.debug("Incoming issue: {}".format(issue["html_url"]))
+        author = message["comment"]["user"]["login"]
+        if ignore_members_of and is_member_of(github_auth, author, ignore_members_of):
+            return False
         return clear_snooze_label_if_set(github_auth, issue, snooze_label)
 
     elif event == "pull_request_review_comment":
         pull_request = message["pull_request"]
         logging.debug("Incoming PR comment hook: {}".format(pull_request["html_url"]))
+        author = message["comment"]["user"]["login"]
         issue = fetch_pr_issue(github_auth, pull_request)
+        if ignore_members_of and is_member_of(github_auth, author, ignore_members_of):
+            return False
         return clear_snooze_label_if_set(github_auth, issue, snooze_label)
 
     elif event == "pull_request":
