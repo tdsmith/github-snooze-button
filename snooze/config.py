@@ -26,6 +26,7 @@ def parse_config(filename):
     snooze_label = response needed
 
     [tdsmith/test_repository]
+    ignore_members_of = Homebrew
 
     [tdsmith/some_other_repository]
     github_username = something_else
@@ -35,13 +36,16 @@ def parse_config(filename):
     github_username, github_token, aws_key, aws_secret, and snooze_label must
     be defined for each repository. Defining aws_region is optional; it defaults
     to us-west-2. Defining poll_interval (the time in seconds between 20-second
-    long polls) is optional; it defaults to 0.
+    long polls) is optional; it defaults to 0. ignore_members_of is optional; it
+    will ignore comments from members of the specified organization.
     """
     config = {}
-    defaults = {"aws_region": "us-west-2", "poll_interval": 0}
+    defaults = {"aws_region": "us-west-2",
+                "poll_interval": 0,
+                "ignore_members_of": None}
     string_options = (["github_username", "github_token",
                        "aws_key", "aws_secret", "aws_region",
-                       "poll_interval", "snooze_label"])
+                       "poll_interval", "snooze_label", "ignore_members_of"])
     parser = configparser.SafeConfigParser()
     parser.read(filename)
     sections = parser.sections()
