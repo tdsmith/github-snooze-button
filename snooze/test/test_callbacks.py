@@ -3,9 +3,11 @@ from textwrap import dedent
 
 import pytest
 import responses
+import requests
 from testfixtures import LogCapture
 
 import snooze
+import snooze.callbacks
 import github_responses
 
 
@@ -124,3 +126,43 @@ class TestGithubWebhookCallback(object):
         with LogCapture() as l:
             snooze.github_callback("foobar", None, None, None)
             assert "WARNING" in str(l)
+
+
+class TestIsMember(object):
+    @pytest.fixture
+    def config(self, tmpdir):
+        config = tmpdir.join("config.txt")
+        config.write(dedent("""\
+            [baxterthehacker/public-repo]
+            github_username: frodo
+            github_token: baggins
+            aws_key: shire
+            aws_secret: precious
+            aws_region: us-west-2
+            snooze_label: snooze
+            ignore_members_of: fellowship
+            """))
+        return snooze.parse_config(str(config))["baxterthehacker/public-repo"]
+
+    @pytest.fixture
+    def github_auth(self, config):
+        return (config["github_username"], config["github_token"])
+
+    @responses.activate
+    def test_is_member_true(self, config, github_auth):
+        url = "https://api.github.com/orgs/fellowship/members/bilbo"
+        responses.add(responses.GET, url, status=204)
+        assert snooze.callbacks.is_member_of(github_auth, "bilbo", "fellowship")
+
+    @responses.activate
+    def test_is_member_false(self, config, github_auth):
+        url = "https://api.github.com/orgs/fellowship/members/sauron"
+        responses.add(responses.GET, url, status=404)
+        assert snooze.callbacks.is_member_of(github_auth, "sauron", "fellowship") is False
+
+    @responses.activate
+    def test_is_member_raises(self, config, github_auth):
+        url = "https://api.github.com/orgs/fellowship/members/bilbo"
+        responses.add(responses.GET, url, status=200)
+        with pytest.raises(requests.exceptions.HTTPError):
+            snooze.callbacks.is_member_of(github_auth, "bilbo", "fellowship")
