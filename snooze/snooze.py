@@ -31,7 +31,9 @@ def main():
     for name, repo in config.items():
         github_auth = (repo["github_username"], repo["github_password"])
         snooze_label = repo["snooze_label"]
-        callback = lambda event, message: github_callback(event, message, github_auth, snooze_label)
+        ignore_members_of = repo["ignore_members_of"]
+        callback = lambda event, message: github_callback(event, message, github_auth,
+                                                          snooze_label, ignore_members_of)
         listener = RepositoryListener(
             callbacks=[callback],
             events=LISTEN_EVENTS,
