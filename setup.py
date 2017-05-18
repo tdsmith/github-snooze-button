@@ -25,7 +25,6 @@ setup(
     install_requires=['boto3', 'requests'],
     entry_points={
         'console_scripts': [
-            'snooze_listen = snooze.snooze:main',
             'snooze_deploy = snooze.deploy_lambda:main',
         ],
     },
