@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import argparse
 import glob
+import json
 import logging
 import os
 import shutil
@@ -13,8 +14,11 @@ from textwrap import dedent
 import boto3
 from botocore.exceptions import ClientError
 import pkg_resources
+import requests
+import six
 
-import snooze
+from .config import parse_config
+from .constants import GITHUB_HEADERS, LISTEN_EVENTS
 
 
 LAMBDA_ROLE_TRUST_POLICY = """\
@@ -55,6 +59,39 @@ def create_or_get_lambda_role():
     role.attach_policy(
         PolicyArn="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole")
     return role
+
+
+def connect_github_to_sns(aws_key, aws_secret, aws_region,
+                          github_username, github_token, repository_name,
+                          sns_topic_arn, events, **_):
+    """Connects a Github repository to a SNS topic.
+
+    Args:
+        sns_topic_arn: ARN of an existing SNS topic
+        events (list<str> | str): Github webhook events to monitor for
+            activity, from https://developer.github.com/webhooks/#events.
+
+    Returns: None
+    """
+    auth = requests.auth.HTTPBasicAuth(github_username, github_token)
+    if isinstance(events, six.string_types):
+        events = [events]
+    payload = {
+        "name": "amazonsns",
+        "config": {
+            "aws_key": aws_key,
+            "aws_secret": aws_secret,
+            "sns_topic": sns_topic_arn,
+            "sns_region": aws_region,
+        },
+        "events": events,
+    }
+    r = requests.post(
+        "https://api.github.com/repos/{}/hooks".format(repository_name),
+        data=json.dumps(payload),
+        headers=GITHUB_HEADERS,
+        auth=auth)
+    r.raise_for_status()
 
 
 def create_deployment_packages(config):
@@ -171,7 +208,7 @@ def main():
     parser.add_argument("config")
     args = parser.parse_args()
 
-    config = snooze.parse_config(args.config)
+    config = parse_config(args.config)
     create_deployment_packages(config)
     iam_role = create_or_get_lambda_role()
 
@@ -180,9 +217,9 @@ def main():
         # set up SNS topic and connect Github
         sns = boto3.resource("sns", region_name=repo["aws_region"])
         topic = sns.create_topic(Name=repository_name.replace("/", "__"))
-        snooze.connect_github_to_sns(
+        connect_github_to_sns(
             sns_topic_arn=topic.arn,
-            events=snooze.constants.LISTEN_EVENTS,
+            events=LISTEN_EVENTS,
             **repo)
 
         # upload a Lambda package

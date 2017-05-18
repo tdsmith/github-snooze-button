@@ -2,7 +2,7 @@ from textwrap import dedent
 
 import pytest
 
-import snooze
+from snooze.config import parse_config
 
 
 class TestConfigParser(object):
@@ -16,7 +16,7 @@ class TestConfigParser(object):
             aws_secret: secret
             snooze_label: snooze
             """))
-        parsed = snooze.parse_config(str(config))
+        parsed = parse_config(str(config))
         assert parsed["tdsmith/test_repo"]["repository_name"] == "tdsmith/test_repo"
         assert parsed["tdsmith/test_repo"]["github_username"] == "tdsmith"
 
@@ -32,7 +32,7 @@ class TestConfigParser(object):
             aws_key: key
             aws_secret: secret
             """))
-        parsed = snooze.parse_config(str(config))
+        parsed = parse_config(str(config))
         assert parsed["tdsmith/test_repo"]["github_username"] == "tdsmith"
         assert parsed["tdsmith/test_repo"]["poll_interval"] == 0
         assert parsed["tdsmith/test_repo"]["ignore_members_of"] is None
@@ -45,4 +45,4 @@ class TestConfigParser(object):
         config = tmpdir.join("config.txt")
         config.write("[tdsmith/test_repo]\ngithub_username: tdsmith\n")
         with pytest.raises(configparser.NoOptionError):
-            snooze.parse_config(str(config))
+            parse_config(str(config))
