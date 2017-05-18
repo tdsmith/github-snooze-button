@@ -11,7 +11,7 @@ Add a "snooze" label to an issue, and github-snooze-button will remove the label
 * a pull request receives a comment on a diff, or
 * a pull request branch is updated.
 
-github-snooze-button can operate in two modes: deployed to AWS Lambda, or polling a Amazon SQS queue locally.
+github-snooze-button runs on AWS Lambda.
 
 ## Configuration file
 
@@ -49,15 +49,6 @@ The AWS credentials in the config file are sent to Github and used to push notif
     * Give each SNS topic permission to invoke its matching Lambda function and create a subscription connecting them
 
 And now you're live.
-
-## Option 2: Polling mode
-
-1. Generate a Github authentication token with `public_repo` and `admin:repo_hook` scopes.
-1. In AWS IAM, create a Amazon AWS user with all the AmazonSQS* and AmazonSNS* policies (and possibly fewer?)
-1. Install github-snooze-button: `pip install git+https://github.com/tdsmith/github-snooze-button.git`
-1. Launch with `snooze_listen /path/to/config.ini`
-
-Note that the queue will continue collecting events unless you disconnect the repository from SNS.
 
 ## Teardown
 
