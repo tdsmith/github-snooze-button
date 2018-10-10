@@ -3,7 +3,7 @@
 
 Projects with a lot of issue volume accumulate a lot of open issues which are not immediately actionable, usually because they're waiting for a response from a contributor. There's no easy way to hide those from the Github interface or signal to other maintainers that an open issue or PR isn't actionable yet.
 
-Enter github-snooze-button!
+   Enter github-snooze-button!
 
 Add a "snooze" label to an issue, and github-snooze-button will remove the label whenever
 
@@ -38,9 +38,9 @@ The AWS credentials in the config file are sent to Github and used to push notif
 ## Option 1: AWS Lambda deployment
 
 1. Generate a Github authentication token with `public_repo`, `admin:repo_hook`, and (if you're using `ignore_member_of`, `org:read`) scopes. (Note that `public_repo` gives write permission! These credentials will be embedded in the Lambda deployment package, so you should consider the contents of the deployment package sensitive.)
-1. Save AWS credentials with [these permissions or better](https://gist.github.com/c27412689c76d01968c86536df796a11) to a place boto can find them: either [in the environment](https://boto3.readthedocs.org/en/latest/guide/configuration.html#environment-variables) or in a [configuration file](https://boto3.readthedocs.org/en/latest/guide/configuration.html#shared-credentials-file).
-1. Install github-snooze-button: `pip install git+https://github.com/tdsmith/github-snooze-button.git`
-1. Launch with `snooze_deploy /path/to/config.ini`. `snooze_deploy` will:
+2. Save AWS credentials with [these permissions or better](https://gist.github.com/c27412689c76d01968c86536df796a11) to a place boto can find them: either [in the environment](https://boto3.readthedocs.org/en/latest/guide/configuration.html#environment-variables) or in a [configuration file](https://boto3.readthedocs.org/en/latest/guide/configuration.html#shared-credentials-file).
+3. Install github-snooze-button: `pip install git+https://github.com/tdsmith/github-snooze-button.git`
+4. Launch with `snooze_deploy /path/to/config.ini`. `snooze_deploy` will:
     * Build deployment packages for each repository
     * Define or re-use a `/tdsmith/github-snooze-button/snooze_lambda_role` IAM role with the `AWSLambdaBasicExecutionRole` policy
     * Create or re-use SNS topics for each repository
@@ -53,9 +53,9 @@ And now you're live.
 ## Option 2: Polling mode
 
 1. Generate a Github authentication token with `public_repo` and `admin:repo_hook` scopes.
-1. In AWS IAM, create a Amazon AWS user with all the AmazonSQS* and AmazonSNS* policies (and possibly fewer?)
-1. Install github-snooze-button: `pip install git+https://github.com/tdsmith/github-snooze-button.git`
-1. Launch with `snooze_listen /path/to/config.ini`
+2. In AWS IAM, create a Amazon AWS user with all the AmazonSQS* and AmazonSNS* policies (and possibly fewer?)
+3. Install github-snooze-button: `pip install git+https://github.com/tdsmith/github-snooze-button.git`
+4. Launch with `snooze_listen /path/to/config.ini`
 
 Note that the queue will continue collecting events unless you disconnect the repository from SNS.
 
