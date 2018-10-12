@@ -1,7 +1,7 @@
 # github-snooze-button [![Build Status](https://travis-ci.org/tdsmith/github-snooze-button.svg?branch=master)](https://travis-ci.org/tdsmith/github-snooze-button) [![Coverage Status](https://coveralls.io/repos/github/tdsmith/github-snooze-button/badge.svg?branch=master)](https://coveralls.io/github/tdsmith/github-snooze-button?branch=master) [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/tdsmith/github-snooze-button/master/LICENSE) [![PyPI](https://img.shields.io/pypi/v/github-snooze-button.svg)](https://pypi.python.org/pypi/github-snooze-button)
 
 
-Projects with a lot of issue volume accumulate a lot of open issues which are not immediately actionable, usually because they're waiting for a response from a contributor. There's no easy way to hide those from the Github interface or signal to other maintainers that an open issue or PR isn't actionable yet.
+Projects with a lot of issue volume accumulate a great deal of open issues which are not immediately actionable, usually because they're waiting for a response from a contributor. There's no easy way to hide those from the Github interface or signal to other maintainers that an open issue or PR isn't actionable yet.
 
 Enter github-snooze-button!
 
